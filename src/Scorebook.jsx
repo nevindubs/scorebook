@@ -1,45 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Trophy, Award, Check, Star, Edit3, X, Lock, Circle, AlertCircle } from 'lucide-react';
+import { Flame, Trophy, Award, Check, Star, Edit3, X, Lock, Circle, AlertCircle, RefreshCw } from 'lucide-react';
 
-// Today's actual MLB slate — May 22, 2026 (15 games)
-const TODAYS_GAMES = [
-  { id: 'hou-chc', away: 'Astros', home: 'Cubs', awayAbbr: 'HOU', homeAbbr: 'CHC', timeET: '2:20 PM', startHour: 14.33, awayColor: '#EB6E1F', homeColor: '#0E3386', venue: 'Wrigley Field' },
-  { id: 'stl-cin', away: 'Cardinals', home: 'Reds', awayAbbr: 'STL', homeAbbr: 'CIN', timeET: '6:40 PM', startHour: 18.67, awayColor: '#C41E3A', homeColor: '#C6011F', venue: 'Great American Ball Park' },
-  { id: 'cle-phi', away: 'Guardians', home: 'Phillies', awayAbbr: 'CLE', homeAbbr: 'PHI', timeET: '6:40 PM', startHour: 18.67, awayColor: '#00385D', homeColor: '#E81828', venue: 'Citizens Bank Park' },
-  { id: 'tb-nyy', away: 'Rays', home: 'Yankees', awayAbbr: 'TB', homeAbbr: 'NYY', timeET: '7:05 PM', startHour: 19.08, awayColor: '#092C5C', homeColor: '#003087', venue: 'Yankee Stadium' },
-  { id: 'pit-tor', away: 'Pirates', home: 'Blue Jays', awayAbbr: 'PIT', homeAbbr: 'TOR', timeET: '7:07 PM', startHour: 19.12, awayColor: '#FDB827', homeColor: '#134A8E', venue: 'Rogers Centre' },
-  { id: 'min-bos', away: 'Twins', home: 'Red Sox', awayAbbr: 'MIN', homeAbbr: 'BOS', timeET: '7:10 PM', startHour: 19.17, awayColor: '#002B5C', homeColor: '#BD3039', venue: 'Fenway Park' },
-  { id: 'nym-mia', away: 'Mets', home: 'Marlins', awayAbbr: 'NYM', homeAbbr: 'MIA', timeET: '7:10 PM', startHour: 19.17, awayColor: '#FF5910', homeColor: '#00A3E0', venue: 'loanDepot park' },
-  { id: 'det-bal', away: 'Tigers', home: 'Orioles', awayAbbr: 'DET', homeAbbr: 'BAL', timeET: '7:15 PM', startHour: 19.25, awayColor: '#0C2340', homeColor: '#DF4601', venue: 'Camden Yards' },
-  { id: 'wsh-atl', away: 'Nationals', home: 'Braves', awayAbbr: 'WSH', homeAbbr: 'ATL', timeET: '7:15 PM', startHour: 19.25, awayColor: '#AB0003', homeColor: '#CE1141', venue: 'Truist Park' },
-  { id: 'sea-kc', away: 'Mariners', home: 'Royals', awayAbbr: 'SEA', homeAbbr: 'KC', timeET: '7:40 PM', startHour: 19.67, awayColor: '#0C2C56', homeColor: '#004687', venue: 'Kauffman Stadium' },
-  { id: 'lad-mil', away: 'Dodgers', home: 'Brewers', awayAbbr: 'LAD', homeAbbr: 'MIL', timeET: '7:40 PM', startHour: 19.67, awayColor: '#005A9C', homeColor: '#12284B', venue: 'American Family Field' },
-  { id: 'tex-laa', away: 'Rangers', home: 'Angels', awayAbbr: 'TEX', homeAbbr: 'LAA', timeET: '9:38 PM', startHour: 21.63, awayColor: '#003278', homeColor: '#BA0021', venue: 'Angel Stadium' },
-  { id: 'col-az', away: 'Rockies', home: 'D-backs', awayAbbr: 'COL', homeAbbr: 'AZ', timeET: '9:40 PM', startHour: 21.67, awayColor: '#33006F', homeColor: '#A71930', venue: 'Chase Field' },
-  { id: 'ath-sd', away: 'Athletics', home: 'Padres', awayAbbr: 'ATH', homeAbbr: 'SD', timeET: '9:40 PM', startHour: 21.67, awayColor: '#003831', homeColor: '#2F241D', venue: 'Petco Park' },
-  { id: 'cws-sf', away: 'White Sox', home: 'Giants', awayAbbr: 'CWS', homeAbbr: 'SF', timeET: '10:15 PM', startHour: 22.25, awayColor: '#27251F', homeColor: '#FD5A1E', venue: 'Oracle Park' },
-];
-
-// Compute game status based on current ET time (rough heuristic: games last ~3hr 15min)
-const getGameStatus = (game, nowHour) => {
-  const start = game.startHour;
-  const end = start + 3.25;
-  if (nowHour < start - 0.1) return 'UPCOMING';
-  if (nowHour < end) return 'LIVE';
-  return 'FINAL';
-};
-
-const generateOfficialPlays = (gameId) => {
-  const plays = ['1B', '2B', '3B', 'HR', 'BB', 'K', 'GO', 'FO'];
-  const weights = [18, 6, 1, 4, 9, 22, 22, 18];
-  const weighted = [];
-  weights.forEach((w, i) => { for (let j = 0; j < w; j++) weighted.push(plays[i]); });
-  let seed = 0;
-  for (let i = 0; i < gameId.length; i++) seed = (seed * 31 + gameId.charCodeAt(i)) & 0x7fffffff;
-  const rng = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-  return Array.from({ length: 80 }, () => weighted[Math.floor(rng() * weighted.length)]);
-};
-const OFFICIAL_PLAYS = Object.fromEntries(TODAYS_GAMES.map(g => [g.id, generateOfficialPlays(g.id)]));
+// All game data, lineups, and play-by-play now come from /api/mlb (our serverless function).
+// The function lives in /api/mlb.js and proxies the free MLB Stats API.
 
 const PLAY_TYPES = [
   { code: '1B', label: 'Single', notation: '1B', fillBases: 1, isHit: true, isOut: false },
@@ -47,7 +10,8 @@ const PLAY_TYPES = [
   { code: '3B', label: 'Triple', notation: '3B', fillBases: 3, isHit: true, isOut: false },
   { code: 'HR', label: 'Home Run', notation: 'HR', fillBases: 4, isHit: true, isOut: false },
   { code: 'BB', label: 'Walk', notation: 'BB', fillBases: 1, isHit: false, isOut: false },
-  { code: 'K', label: 'Strikeout', notation: 'K', fillBases: 0, isHit: false, isOut: true },
+  { code: 'K', label: 'K Swinging', notation: 'K', fillBases: 0, isHit: false, isOut: true },
+  { code: 'KL', label: 'K Looking', notation: 'ꓘ', fillBases: 0, isHit: false, isOut: true },
   { code: 'GO', label: 'Groundout', notation: '6-3', fillBases: 0, isHit: false, isOut: true },
   { code: 'FO', label: 'Flyout', notation: 'F8', fillBases: 0, isHit: false, isOut: true },
 ];
@@ -107,18 +71,52 @@ export default function Scorebook() {
   const [summary, setSummary] = useState(null);
   const [editingLineup, setEditingLineup] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
-  const [nowHour, setNowHour] = useState(() => {
-    const d = new Date();
-    return d.getHours() + d.getMinutes() / 60;
-  });
+  // Live data state
+  const [games, setGames] = useState([]); // today's schedule (fetched)
+  const [gamesLoading, setGamesLoading] = useState(true);
+  const [gamesError, setGamesError] = useState(null);
+  const [officialPlays, setOfficialPlays] = useState([]); // for the currently-selected game
+  const [lineupsPosted, setLineupsPosted] = useState(false);
+
+  // Fetch today's schedule on mount, then refresh every 90 seconds so live statuses
+  // (Upcoming → Live → Final) update without a manual reload.
+  const loadGames = async () => {
+    try {
+      setGamesError(null);
+      const r = await fetch('/api/mlb?type=schedule');
+      if (!r.ok) throw new Error('Schedule fetch failed');
+      const data = await r.json();
+      setGames(data.games || []);
+    } catch (e) {
+      setGamesError(e.message);
+    } finally {
+      setGamesLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const t = setInterval(() => {
-      const d = new Date();
-      setNowHour(d.getHours() + d.getMinutes() / 60);
-    }, 60000);
+    loadGames();
+    const t = setInterval(loadGames, 90000);
     return () => clearInterval(t);
   }, []);
+
+  // While a game is selected, poll for new plays every 20 seconds so accuracy
+  // grading reflects the live play-by-play feed.
+  useEffect(() => {
+    if (!selectedGame || screen !== 'game') return;
+    let cancelled = false;
+    const fetchPlays = async () => {
+      try {
+        const r = await fetch(`/api/mlb?type=plays&gamePk=${selectedGame.gamePk}`);
+        if (!r.ok || cancelled) return;
+        const data = await r.json();
+        setOfficialPlays(data.plays || []);
+      } catch (e) { /* ignore transient errors */ }
+    };
+    fetchPlays();
+    const t = setInterval(fetchPlays, 20000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [selectedGame, screen]);
 
   useEffect(() => {
     (async () => {
@@ -135,18 +133,38 @@ export default function Scorebook() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
   };
 
-  const selectGame = (game) => {
-    const status = getGameStatus(game, nowHour);
-    if (status === 'FINAL') return;
+  const selectGame = async (game) => {
+    if (game.status === 'FINAL' || game.status === 'OFF') return;
     setSelectedGame(game);
-    setLineups({ away: Array(LINEUP_SIZE).fill(''), home: Array(LINEUP_SIZE).fill('') });
     setGrid({ away: {}, home: {} });
     setCurrentBatter({ away: 0, home: 0 });
     setCurrentInning(1);
     setOuts(0);
     setActiveTeam('away');
+    setOfficialPlays([]);
     setScreen('game');
-    setEditingLineup('away');
+
+    // Try to fetch the official lineups; if they're not posted yet, fall back to empty
+    try {
+      const r = await fetch(`/api/mlb?type=lineups&gamePk=${game.gamePk}`);
+      if (r.ok) {
+        const data = await r.json();
+        const away = (data.away && data.away.length === 9) ? data.away : Array(LINEUP_SIZE).fill('');
+        const home = (data.home && data.home.length === 9) ? data.home : Array(LINEUP_SIZE).fill('');
+        setLineups({ away, home });
+        setLineupsPosted(data.posted && away[0] && home[0]);
+        // Only auto-open the lineup editor if MLB hasn't posted lineups yet
+        if (!away[0] || !home[0]) setEditingLineup('away');
+      } else {
+        setLineups({ away: Array(LINEUP_SIZE).fill(''), home: Array(LINEUP_SIZE).fill('') });
+        setLineupsPosted(false);
+        setEditingLineup('away');
+      }
+    } catch (e) {
+      setLineups({ away: Array(LINEUP_SIZE).fill(''), home: Array(LINEUP_SIZE).fill('') });
+      setLineupsPosted(false);
+      setEditingLineup('away');
+    }
   };
 
   const totalPlaysLogged = () => {
@@ -174,9 +192,12 @@ export default function Scorebook() {
 
     const playType = PLAY_TYPES.find(p => p.code === playCode);
     const officialIdx = totalPlaysLogged();
-    const official = OFFICIAL_PLAYS[selectedGame.id]?.[officialIdx];
-    const correct = official === playCode;
-    const points = correct ? 10 : 2;
+    const officialPlay = officialPlays[officialIdx];
+    const official = officialPlay?.code || null;
+    // Only grade as "correct" if we have a real official play to compare against.
+    // If MLB hasn't logged it yet (live game, ahead of feed), award participation points.
+    const correct = official ? official === playCode : false;
+    const points = official ? (correct ? 10 : 2) : 5;
 
     const newGrid = {
       ...grid,
@@ -272,7 +293,16 @@ export default function Scorebook() {
   return (
     <div style={S.app}>
       <style>{globalCSS}</style>
-      {screen === 'home' && <HomeScreen stats={stats} onSelectGame={selectGame} nowHour={nowHour} />}
+      {screen === 'home' && (
+        <HomeScreen
+          stats={stats}
+          onSelectGame={selectGame}
+          games={games}
+          gamesLoading={gamesLoading}
+          gamesError={gamesError}
+          onRefresh={loadGames}
+        />
+      )}
       {screen === 'game' && selectedGame && (
         <GameScreen
           game={selectedGame} lineups={lineups} grid={grid}
@@ -310,11 +340,11 @@ export default function Scorebook() {
   );
 }
 
-function HomeScreen({ stats, onSelectGame, nowHour }) {
-  const games = TODAYS_GAMES.map(g => ({ ...g, status: getGameStatus(g, nowHour) }));
+function HomeScreen({ stats, onSelectGame, games, gamesLoading, gamesError, onRefresh }) {
   const liveGames = games.filter(g => g.status === 'LIVE');
   const upcoming = games.filter(g => g.status === 'UPCOMING');
   const finished = games.filter(g => g.status === 'FINAL');
+  const off = games.filter(g => g.status === 'OFF');
 
   return (
     <div style={S.screen}>
@@ -335,6 +365,21 @@ function HomeScreen({ stats, onSelectGame, nowHour }) {
 
       {stats.badges.length > 0 && (
         <div style={S.badgeRow}>{stats.badges.map(b => <Badge key={b} type={b}/>)}</div>
+      )}
+
+      {gamesLoading && games.length === 0 && (
+        <div style={S.scheduleStatus}>Loading today's schedule...</div>
+      )}
+
+      {gamesError && (
+        <div style={S.scheduleError}>
+          <span>Couldn't load schedule: {gamesError}</span>
+          <button onClick={onRefresh} style={S.refreshBtn}><RefreshCw size={13}/> Retry</button>
+        </div>
+      )}
+
+      {!gamesLoading && !gamesError && games.length === 0 && (
+        <div style={S.scheduleStatus}>No games scheduled today.</div>
       )}
 
       {liveGames.length > 0 && (
@@ -364,6 +409,15 @@ function HomeScreen({ stats, onSelectGame, nowHour }) {
         </>
       )}
 
+      {off.length > 0 && (
+        <>
+          <SectionLabel>Postponed</SectionLabel>
+          <div style={S.gameList}>
+            {off.map(g => <GameCard key={g.id} game={g} onSelect={onSelectGame} />)}
+          </div>
+        </>
+      )}
+
       <div style={S.footnote}>
         Pick a live or upcoming game to score. Match the official play-by-play for accuracy points and build a streak by scoring daily.
       </div>
@@ -380,8 +434,9 @@ function StatusPill({ status }) {
     LIVE: { bg: '#dc2626', fg: '#fff', label: 'LIVE', dot: true },
     UPCOMING: { bg: '#e5e7eb', fg: '#374151', label: 'UPCOMING' },
     FINAL: { bg: '#9ca3af', fg: '#fff', label: 'FINAL' },
+    OFF: { bg: '#fef3c7', fg: '#92400e', label: 'POSTPONED' },
   };
-  const cfg = map[status];
+  const cfg = map[status] || map.UPCOMING;
   return (
     <span style={{ ...S.pill, background: cfg.bg, color: cfg.fg }}>
       {cfg.dot && <span style={S.liveDot}/>}
@@ -392,26 +447,36 @@ function StatusPill({ status }) {
 
 function GameCard({ game, onSelect }) {
   const isFinal = game.status === 'FINAL';
+  const isOff = game.status === 'OFF';
+  const disabled = isFinal || isOff;
+  const showScore = game.status === 'LIVE' || isFinal;
+
   return (
     <button
       onClick={() => onSelect(game)}
-      disabled={isFinal}
-      style={{ ...S.gameCard, ...(isFinal ? S.gameCardDisabled : {}) }}
+      disabled={disabled}
+      style={{ ...S.gameCard, ...(disabled ? S.gameCardDisabled : {}) }}
     >
       <div style={S.gameTopRow}>
         <StatusPill status={game.status} />
-        <span style={S.gameTime}>{game.timeET}</span>
+        <span style={S.gameTime}>
+          {game.status === 'LIVE' && game.currentInning
+            ? `${game.inningHalf === 'Top' ? '▲' : '▼'} ${game.currentInning}`
+            : game.timeET}
+        </span>
       </div>
       <div style={S.matchupRow}>
         <div style={S.teamRow}>
-          <div style={{ ...S.teamDot, background: isFinal ? '#9ca3af' : game.awayColor }}/>
+          <div style={{ ...S.teamDot, background: disabled ? '#9ca3af' : game.awayColor }}/>
           <span style={S.teamAbbr}>{game.awayAbbr}</span>
           <span style={S.teamFullName}>{game.away}</span>
+          {showScore && <span style={S.teamScore}>{game.awayScore ?? 0}</span>}
         </div>
         <div style={S.teamRow}>
-          <div style={{ ...S.teamDot, background: isFinal ? '#9ca3af' : game.homeColor }}/>
+          <div style={{ ...S.teamDot, background: disabled ? '#9ca3af' : game.homeColor }}/>
           <span style={S.teamAbbr}>{game.homeAbbr}</span>
           <span style={S.teamFullName}>{game.home}</span>
+          {showScore && <span style={S.teamScore}>{game.homeScore ?? 0}</span>}
         </div>
       </div>
       <div style={S.gameVenue}>{game.venue}</div>
@@ -719,11 +784,22 @@ function GlyphMarks({ code }) {
     );
   }
   if (code === 'K') {
-    // Strikeout: big K centered (swinging)
+    // Strikeout swinging: big K centered
     return (
       <>
         <polygon points="20,4 36,20 20,36 4,20" fill="none" stroke="#cbd5e1" strokeWidth="1"/>
         <text x="20" y="26" textAnchor="middle" fill={ink} fontSize="18" fontWeight="800" fontFamily="-apple-system, sans-serif">K</text>
+      </>
+    );
+  }
+  if (code === 'KL') {
+    // Strikeout looking: backwards K (mirrored horizontally)
+    return (
+      <>
+        <polygon points="20,4 36,20 20,36 4,20" fill="none" stroke="#cbd5e1" strokeWidth="1"/>
+        <g transform="translate(40, 0) scale(-1, 1)">
+          <text x="20" y="26" textAnchor="middle" fill={ink} fontSize="18" fontWeight="800" fontFamily="-apple-system, sans-serif">K</text>
+        </g>
       </>
     );
   }
@@ -1006,7 +1082,11 @@ const S = {
   teamRow: { display: 'flex', alignItems: 'center', gap: 8 },
   teamDot: { width: 8, height: 8, borderRadius: '50%' },
   teamAbbr: { fontFamily: FONT_NUM, fontSize: 13, fontWeight: 700, color: '#0f172a', minWidth: 32 },
-  teamFullName: { fontSize: 14, color: '#334155', fontWeight: 500 },
+  teamFullName: { fontSize: 14, color: '#334155', fontWeight: 500, flex: 1 },
+  teamScore: { fontFamily: FONT_NUM, fontSize: 15, fontWeight: 700, color: '#0f172a', minWidth: 20, textAlign: 'right' },
+  scheduleStatus: { padding: '20px 12px', textAlign: 'center', fontSize: 13, color: '#64748b', marginBottom: 10 },
+  scheduleError: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, fontSize: 12, color: '#991b1b', marginBottom: 10 },
+  refreshBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#fff', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#991b1b', fontWeight: 600, cursor: 'pointer' },
   gameVenue: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
 
   footnote: { marginTop: 20, padding: 12, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 12, color: '#64748b', lineHeight: 1.5 },
@@ -1068,7 +1148,7 @@ const S = {
   playInputLabel: { fontSize: 12, color: '#64748b', textAlign: 'center', marginBottom: 10, minHeight: 18 },
   atBatName: { color: '#0f172a', fontWeight: 600 },
   lockedLabel: { display: 'inline-flex', alignItems: 'center', gap: 5, color: '#94a3b8' },
-  playGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 },
+  playGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 },
   playBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 4px 6px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, transition: 'background 0.1s' },
   playBtnDisabled: { opacity: 0.4 },
   playBtnGlyph: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32 },
